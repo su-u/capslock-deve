@@ -12,6 +12,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.ResourceBundle;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -44,9 +49,6 @@ import javafx.scene.text.Font;
 import javafx.stage.Screen;
 import javafx.stage.WindowEvent;
 import javafx.util.Duration;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * FXML Controller class
@@ -59,7 +61,7 @@ public class MainFormController implements Initializable {
     private static final String DB_FILE_NAME = "GamesInfo.json";
     private static final double PANEL_RATIO = 0.25;
     private static final double PANEL_GAP_RATIO = 0.03;
-    
+
     private enum State{
         None,
         ImageOnly,
@@ -67,11 +69,11 @@ public class MainFormController implements Initializable {
         Both_Image,
         Both_Media
     }
-        
+
     private State DisplayState;
 
     private GameCertification game;
-    
+
     private Timeline ImageTimeLine;
     private List<Image> ImageList = new ArrayList<>();
     private Iterator<Image> ImageIterator;
@@ -79,7 +81,7 @@ public class MainFormController implements Initializable {
     private Iterator<Media> MovieIterator;
     private boolean IsGameMapped = false;
     private final List<GameCertification> GameList;
-    
+
     @FXML private HBox RootHBox;
     @FXML private ScrollPane LeftScrollPane;
     @FXML private Label NameLabel;
@@ -92,12 +94,12 @@ public class MainFormController implements Initializable {
 
     public MainFormController() {
         List<GameCertification> ListBuilder = new ArrayList<>();
-        
+
         try(final BufferedReader reader = new BufferedReader(new FileReader(DB_FILE_NAME));){
-            
+
             final String JsonString = reader.readLine();
             new JSONArray(JsonString).forEach(record -> ListBuilder.add(new GameCertification((JSONObject) record)));
-            
+
         } catch (FileNotFoundException ex) {
             LogHandler.instance.warning("Failed to open " + DB_FILE_NAME);
         } catch (IOException ex) {
@@ -108,11 +110,11 @@ public class MainFormController implements Initializable {
             GameList = null;
             return;
         }
-        
+
         GameList = Collections.unmodifiableList(ListBuilder);
         LogHandler.instance.fine(GameList.size() + "件のゲームを検出");
     }
-    
+
     @Override
     public void initialize(URL url, ResourceBundle rb){
         ImageTimeLine = new Timeline(new KeyFrame(
@@ -120,44 +122,44 @@ public class MainFormController implements Initializable {
         ae -> UpdateImage(ae)));
         ImageTimeLine.setCycleCount(Animation.INDEFINITE);
     }
-    
+
     public void onLoad(WindowEvent event){
         if(IsGameMapped)return;
-        
+
         final double PanelImageSideLength;
-        
+
         {
             final Rectangle2D ScreenRect = Screen.getPrimary().getVisualBounds();
             final double FullScreenWidth = ScreenRect.getWidth();
             final double FullScreenHeight = ScreenRect.getHeight();
             final double LeftSize = FullScreenWidth / 5 * 2;
-            
+
             LeftScrollPane.setPrefViewportWidth(LeftSize);
             LeftScrollPane.setMinViewportWidth(LeftSize);
 
             PanelImageSideLength = LeftSize * PANEL_RATIO;
-            
+
             final double Gap = LeftSize * PANEL_GAP_RATIO;
             PanelTilePane.setPadding(new Insets(LeftSize / 12));
             PanelTilePane.setVgap(Gap);
             PanelTilePane.setHgap(Gap);
-            
+
             final double RightContentPadding = (FullScreenWidth - LeftSize) / 20;
             RightVBox.setPadding(new Insets(RightContentPadding));
-            
+
             NameLabel.setFont(Font.font(FullScreenHeight / 20));
         }
-            
+
         for(GameCertification game : GameList){
             final Image PanelImage;
-            
+
             if(Files.isRegularFile(game.getPanelPath())){
                 PanelImage = new Image(game.getPanelPath().toUri().toString());
             }else{
                 PanelImage = GenerateCharPanel(game.getName().charAt(0));
                 LogHandler.instance.warning("game's UUID : " + game.getUUID().toString() + " doesn't have panel image.");
             }
-            
+
             final ImageView view = new ImageView(PanelImage);
             view.setPreserveRatio(false);
             view.setFitWidth(PanelImageSideLength);
@@ -170,9 +172,9 @@ public class MainFormController implements Initializable {
             PanelTilePane.getChildren().add(view);
         }
     }
-    
+
     static private Image GenerateCharPanel(final char ch){
-        
+
         final Label label = new Label(Character.toString(Character.toUpperCase(ch)));
         label.setMinSize(125, 125);
         label.setMaxSize(125, 125);
@@ -186,9 +188,9 @@ public class MainFormController implements Initializable {
         scene.snapshot(img);
         return img ;
     }
-    
 
-    
+
+
     class onMovieEndClass implements Runnable{
         @Override
         public void run(){
@@ -200,7 +202,7 @@ public class MainFormController implements Initializable {
                     PlayMovie(MovieIterator.next());
                 }else{
                     DisplayState = State.Both_Image;
-                    
+
                     ImageIterator = ImageList.iterator();
                     StackedImageView.setImage(ImageIterator.next());
                     ImageTimeLine.play();
@@ -209,24 +211,24 @@ public class MainFormController implements Initializable {
             }
         }
     }
-    
+
     Runnable onMovieEnd = new onMovieEndClass();
 
     public void onImageFocused(ImageView view){
         if(game != null)ReleasePreviousGameContents();
-        
+
         game = (GameCertification)view.getUserData();
         NameLabel.setText(game.getName());
         DescriptionLabel.setText(game.getDescription());
-        
+
         byte Flags = 0;
-        
+
         game.getImagesPathList().forEach(path -> ImageList.add(new Image(path.toUri().toString())));
         game.getMoviePathList().forEach(path -> MovieList.add(new Media(path.toUri().toString())));
-        
+
         if(!ImageList.isEmpty())Flags = 0b1;
-        if(!MovieList.isEmpty())Flags += 0b10; 
-        
+        if(!MovieList.isEmpty())Flags += 0b10;
+
         switch(Flags){
             case 0:
                 DisplayState = State.None;
@@ -240,7 +242,7 @@ public class MainFormController implements Initializable {
                 MovieIterator = MovieList.iterator();
                 PlayMovie(MovieIterator.next());
                 StackedImageView.setVisible(false);
-                break;           
+                break;
             case 0b11:
                 DisplayState = State.Both_Image;
                 ImageSet();
@@ -253,7 +255,7 @@ public class MainFormController implements Initializable {
         DescriptionLabel.autosize();
         double textwidth = DescriptionLabel.getWidth();
     }
-    
+
     private void ReleasePreviousGameContents(){
         ImageTimeLine.stop();
         ImageList.clear();
@@ -266,7 +268,7 @@ public class MainFormController implements Initializable {
         StackedMediaView.setMediaPlayer(null);
         game = null;
     }
-    
+
     @FXML
     private void onGameClicked(MouseEvent ev){
         ProcessBuilder pb = new ProcessBuilder(game.getExecutablePath().toString());
@@ -277,11 +279,11 @@ public class MainFormController implements Initializable {
             System.out.println(ex);
         }
     }
-    
+
     private void UpdateImage(ActionEvent event){
         try{
             DisplayImage();
-            
+
         }catch(NoSuchElementException ex){
             if(DisplayState == State.ImageOnly){
                 ImageIterator = ImageList.iterator();
@@ -297,28 +299,28 @@ public class MainFormController implements Initializable {
         System.err.println("timer");
         System.err.println(DescriptionLabel.getLayoutX());
     }
-    
+
     private void ImageSet(){
         ImageIterator = ImageList.iterator();
         DisplayImage();
         ImageTimeLine.play();
         StackedMediaView.setVisible(false);
     }
-    
+
     private void PlayMovie(Media movie){
         MediaPlayer player = new MediaPlayer(movie);
         player.setOnEndOfMedia(onMovieEnd);
         player.setAutoPlay(true);
-        player.setCycleCount(1);       
+        player.setCycleCount(1);
         StackedMediaView.setMediaPlayer(player);
         StackedMediaView.setFitWidth(ViewStackPane.getWidth());
     }
-    
+
     private void DisplayImage(){
         StackedImageView.setImage(ImageIterator.next());
         StackedImageView.setFitWidth(ViewStackPane.getWidth());
     }
-    
+
     private void SwapDisplayContentType(){
         StackedImageView.setVisible(!StackedImageView.isVisible());
         StackedMediaView.setVisible(!StackedMediaView.isVisible());
