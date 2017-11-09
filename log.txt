@@ -1,0 +1,8 @@
+2017-11-09 21:58:43.677 [INFO] CapsLock started.
+2017-11-09 21:58:43.719 [WARNING] Failed to open GamesInfo.json
+2017-11-09 21:58:43.720 [FINE] 0件のゲームを検出
+2017-11-09 21:58:50.797 [INFO] CapsLock terminated normally.
+2017-11-09 22:03:46.771 [INFO] CapsLock started.
+2017-11-09 22:03:46.810 [WARNING] Failed to open GamesInfo.json
+2017-11-09 22:03:46.810 [FINE] 0件のゲームを検出
+2017-11-09 22:03:51.884 [INFO] CapsLock terminated normally.
